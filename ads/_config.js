@@ -1018,7 +1018,7 @@ export const adConfig = {
     renderStartImplemented: true,
   },
 
-  xlift: {
+  'xlift': {
     prefetch: 'https://cdn.x-lift.jp/resources/common/xlift_amp.js',
     renderStartImplemented: true,
   },

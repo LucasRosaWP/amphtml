@@ -1,5 +1,5 @@
 <!--
-Copyright 2018 The AMP HTML Authors. All Rights Reserved.
+Copyright 2019 The AMP HTML Authors. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -56,12 +56,12 @@ limitations under the License.
 
 ## Attributes
 
-##### adv
+##### adv (optional)
 
 If this attribute is present adds will be played before the video.
-Defaults to `true`
+Defaults to `true` when set
 
-##### url
+##### url (optional)
 
 Url to video material in one of the following domains:
 
@@ -72,81 +72,100 @@ Url to video material in one of the following domains:
 * tvp
 * vimeo
 
-Required if `<clip>` attribute is not present.
+Required if `clip` attribute is not present.
 
-##### title
+##### title (optional)
 
 If this attribute is present, the title of the video will be overridden.
 
-##### screenshot
+##### poster (optional)
 
 If this attribute is present, it will override the default placeholder image.
 The passed value should be an URL to an image.
 
-##### clip
+##### clip (optional)
 
-If this attribute is present, the data from the passed object will be added to attributes of players contructor.
+If this attribute is present, the data from the passed object will be added to attributes of players contructor. Passed value should be a valid JSON object.
+
+Valuable object properties are:
+
+* mid: number
+* screenshot: string
+* duration: number
+* minimalAge: number
+* title: string
+* titleUrl: url
+* description: string
+* source: string
+* tags: string
+* advTags: string
+* geoTargetAllow: boolean
+* drastic: number
+* adv: boolean
+* url: array
+* media: object
+* transcription: array
 
 If properties in clip object and html tag are present values from html tag take presidence.
 
-##### forcerelated
+The structure of this object is subject to change in the future.
+
+required if `url` attribute is not present
+
+##### forcerelated (optional)
 
 If this attribute is present, after video finishes playing related videos will be from the specified list. Passed value should be a semicolon separated list of clip identifiers.
 
-##### hiderelated
+##### hiderelated (optional)
 
 If this attribute is present, related videos won't be played after video finishes playing.
 Defaults to `false`.
 
-##### hideendscreen
+##### hideendscreen (optional)
 
 If this attribute is present, the end screen won't be shown after the video.
 Defaults to `false`.
 
-##### mediaEmbed
+##### mediaEmbed (optional)
 
-Human readable page site.
+Human readable name of a website the player is used on.
 Defaults to `portalowy`.
 
-##### extendedrelated
+##### extendedrelated (optional)
 
 This attribute lets you override related material that's displayed under the video
 Defaults to `true`.
 
-##### skin
+##### skin (optional)
 
-This attribute lets you override what player skin is used. Passed value should be a object with name and url properties. // format obiektu
+This attribute lets you override what player skin is used. Passed value should be a object with name and url properties.
 
-##### showlogo
+##### showlogo (optional)
 
 This attribute is used to disable WP logo in the corner of the video for livestreams.
 Defaults to `true`.
 
-##### watermark
+##### watermark (optional)
 
 This attribute is used to enable WP wathermark in the corner of the video.
 Defaults to `false`.
 
-##### qoeEventsConfig
+##### qoeEventsConfig (optional)
 
 Object passed with this attribute is used to configure que statistics.
 
-##### advVastDuration
+##### advVastDuration (optional)
 
 This attribute specifies how many of 15 second ad prerolls/midrolls can be present in a video.
 Defaults to `2`.
 
-##### vastTag
+##### vastTag (optional)
 
 This attribute lets you specify an url to creation in VAST 2.0 standard.
 
-##### embedTrackings
+##### embedTrackings (optional)
 
 This attribute lets you specify additional custom VAST 2.0 trackings.
-
-##### common attributes
-
-This element includes [common attributes](https://www.ampproject.org/docs/reference/common_attributes) extended to AMP components.
 
 ## Validation
 See [amp-wpm-player rules](https://github.com/ampproject/amphtml/blob/master/extensions/amp-wpm-player/validator-amp-wpm-player.protoascii) in the AMP validator specification.

@@ -1,5 +1,5 @@
 /**
-* Copyright 2018 The AMP HTML Authors. All Rights Reserved.
+* Copyright 2019 The AMP HTML Authors. All Rights Reserved.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -21,146 +21,199 @@ import {
 } from '../../../src/video-interface';
 import {Services} from '../../../src/services';
 
-import {
-  installVideoManagerForDoc,
-} from '../../../src/service/video-manager-impl';
-
+import {addParamToUrl} from '../../../src/url';
 import {
   fullscreenEnter,
   fullscreenExit,
   isFullscreenElement,
 } from '../../../src/dom';
-
+import {
+  installVideoManagerForDoc,
+} from '../../../src/service/video-manager-impl';
 import {isLayoutSizeDefined} from '../../../src/layout';
+import {tryParseJson} from '../../../src/json';
+import {user} from '../../../src/log';
 
-/** @implements {../../../src/video-interface.VideoInterface} */
-export class AmpWpmPlayer extends AMP.BaseElement {
+/**
+  * @typedef {{
+  *  ampcontrols: boolean,
+  *  autoplay: boolean,
+  *  forceUrl4stat: string,
+  *  target: string,
+  *  clip: (!JsonObject|undefined),
+  *  adv: (boolean|undefined),
+  *  url: (string|undefined),
+  *  title: (string|undefined),
+  *  screenshot: (string|undefined),
+  *  forcerelated: (boolean|undefined)
+  *  hiderelated: (boolean|undefined)
+  *  hideendscreen: (boolean|undefined)
+  *  mediaEmbed: (string|undefined),
+  *  extendedrelated: (boolean|undefined)
+  *  skin: (!JsonObject|undefined),
+  *  showlogo: (boolean|undefined)
+  *  watermark: (boolean|undefined)
+  *  qoeEventsConfig: (!JsonObject|undefined),
+  *  advVastDuration: (number|undefined),
+  *  vastTag: (string|undefined),
+  *  embedTrackings: (!JsonObject|undefined),
+  *  id: (string|undefined),
+  *  ampnoaudio: (boolean|undefined)
+  *  dock: (boolean|undefined),
+  *  rotateToFullscreen: (boolean|undefined),
+  * }}
+  */
+let AttributeOptionsDef;
+
+/**
+ * @class
+ * @private
+ */
+class attributeParser {
   /**
-   * @description Method that parses attributes,
-   * and ensures that all of the required parameters are present
-   * @function
-   * @private
-   *
-   * @return {Object}
-   */
-  parseAttributes_() {
-    /**
-     * @private
-     * @param {*} name
-     * @param {*} required
-     * @param {*} parseFunction
+     * @param {Element} element
+     * @param {string} name
+     * @param {function(string):T} parseFunction
+     * @param {boolean=} opt_required
+     * @return {T|undefined}
+     * @template T
      */
-    const parseAttribute = (name, required, parseFunction) => {
-      let value = this.element_.getAttribute(name);
+  static parseAttribute(element, name, parseFunction, opt_required) {
+    let value = element.getAttribute(name);
 
-      if (value === '') {
-        value = 'true';
-      }
+    if (value === '') {
+      value = 'true';
+    }
 
-      if (value) {
-        return parseFunction(value);
-      } else if (required) {
-        throw new Error(`attribute ${name} is reqired`);
-      }
-    };
+    if (!value) {
+      user().assert(!opt_required, 'attribute %s is required', name);
+      return;
+    }
+    return parseFunction(value);
+  }
 
-    /**
+  /**
      * Method that parses a json object from the html attribute
      * specified in the name parameter
-     * @private
+     * @param {Element} element
      * @param {string} name
-     * @param {boolean} required Specifies weather to throw and error when the attribute is not preset
+     * @param {boolean} opt_required whether to throw an error when the attribute is absent
      *
-     * @return {Object}
+     * @return {!JsonObject}
      */
-    parseAttribute.json = (name, required) =>
-      parseAttribute(
-          name,
-          required,
-          value => JSON.parse(decodeURIComponent(value))
-      );
+  static parseJson(element, name, opt_required) {
+    return this.constructor.parseAttribute(
+        element,
+        name,
+        value => tryParseJson(decodeURIComponent(value)),
+        opt_required,
+    );
+  }
 
-    /**
+  /**
      * Method that parses a boolean from the html attribute
      * specified in the name parameter
-     * @private
+     * @param {Element} element
      * @param {string} name
-     * @param {boolean} required Specifies weather to throw and error when the attribute is not preset
+     * @param {boolean} opt_required Specifies weather to throw and error when the attribute is not preset
      *
      * @return {boolean}
      */
-    parseAttribute.boolean = (name, required) =>
-      parseAttribute(
-          name,
-          required,
-          value => value.toLowerCase() === 'true',
-      );
+  static parseBoolean(element, name, opt_required) {
+    return this.constructor.parseAttribute(
+        name,
+        value => value.toLowerCase() === 'true',
+        opt_required,
+    );
+  }
 
-    /**
+  /**
      * Method that parses a string from the html attribute
      * specified in the name parameter
-     * @private
+     * @param {Element} element
      * @param {string} name
-     * @param {boolean} required Specifies weather to throw and error when the attribute is not preset
+     * @param {boolean} opt_required Specifies weather to throw and error when the attribute is not preset
      *
      * @return {string}
      */
-    parseAttribute.string = (name, required) =>
-      parseAttribute(
-          name,
-          required,
-          value => value,
-      );
+  static parseString(element, name, opt_required) {
+    return this.constructor.parseAttribute(
+        element,
+        name,
+        value => value,
+        opt_required,
+    );
+  }
 
-    /**
+  /**
      * Method that parses a number from the html attribute
      * specified in the name parameter
-     * @private
+     * @param {Element} element
      * @param {string} name
-     * @param {boolean} required Specifies weather to throw and error when the attribute is not preset
+     * @param {boolean} opt_required Specifies weather to throw and error when the attribute is not preset
      *
      * @return {number}
      */
-    parseAttribute.number = (name, required) =>
-      parseAttribute(
-          name,
-          required,
-          value => parseInt(value, 10),
-      );
+  static parseNumber(element, name, opt_required) {
+    return this.constructor.parseAttribute(
+        element,
+        name,
+        value => parseInt(value, 10),
+        opt_required,
+    );
+  }
 
-    const clip = parseAttribute.json('clip') || {};
+  /**
+   * @description Method that parses attributes,
+   * and ensures that all of the required parameters are present
+  * @param {Element} element
+   *
+   * @return {!AttributeOptionsDef}
+   */
+  static parseAttributes(element) {
+    const clip = this.constructor.parseJson('clip') || {};
     return {
       ampcontrols: true,
-      forceUrl4stat: this.win.location.href,
+      forceUrl4stat: this.constructor.win.location.href,
       target: 'playerTarget',
       ...clip,
-      adv: parseAttribute.boolean('adv'),
-      url: parseAttribute.string('url'),
-      title: parseAttribute.string('title'),
-      screenshot: parseAttribute.string('screenshot'),
-      forcerelated: parseAttribute.boolean('forcerelated'),
-      hiderelated: parseAttribute.boolean('hiderelated'),
-      hideendscreen: parseAttribute.boolean('hideendscreen'),
-      mediaEmbed: parseAttribute.string('mediaEmbed'),
-      extendedrelated: parseAttribute.boolean('extendedrelated'),
-      skin: parseAttribute.json('skin'),
-      showlogo: parseAttribute.boolean('showlogo'),
-      watermark: parseAttribute.boolean('watermark'),
-      qoeEventsConfig: parseAttribute.json('qoeEventsConfig'),
-      advVastDuration: parseAttribute.number('advVastDuration'),
-      vastTag: parseAttribute.string('vastTag'),
-      embedTrackings: parseAttribute.json('embedTrackings'),
-      id: parseAttribute.string('id'),
+      adv: this.constructor.parseBoolean(element, 'adv'),
+      url: this.constructor.parseString(element, 'url'),
+      title: this.constructor.parseString(element, 'title'),
+      screenshot: this.constructor.parseString(element, 'poster'),
+      forcerelated: this.constructor.parseBoolean(element, 'forcerelated'),
+      hiderelated: this.constructor.parseBoolean(element, 'hiderelated'),
+      hideendscreen: this.constructor.parseBoolean(element, 'hideendscreen'),
+      mediaEmbed: this.constructor.parseString(element, 'mediaEmbed'),
+      extendedrelated: this.constructor.parseBoolean(
+          element,
+          'extendedrelated'),
+      skin: this.constructor.parseJson(element, 'skin'),
+      showlogo: this.constructor.parseBoolean(element, 'showlogo'),
+      watermark: this.constructor.parseBoolean(element, 'watermark'),
+      qoeEventsConfig: this.constructor.parseJson(element, 'qoeEventsConfig'),
+      advVastDuration: this.constructor.parseNumber(element, 'advVastDuration'),
+      vastTag: this.constructor.parseString(element, 'vastTag'),
+      embedTrackings: this.constructor.parseJson(element, 'embedTrackings'),
+      id: this.constructor.parseString(element, 'id'),
 
-      autoplay: parseAttribute.boolean(VideoAttributes.AUTOPLAY) || false,
-      ampnoaudio: parseAttribute.boolean(VideoAttributes.NO_AUDIO),
-      dock: parseAttribute.boolean(VideoAttributes.DOCK),
-      rotateToFullscreen: parseAttribute.boolean(
+      autoplay: this.constructor.parseBoolean(
+          element,
+          VideoAttributes.AUTOPLAY) || false,
+      ampnoaudio: this.constructor.parseBoolean(
+          element,
+          VideoAttributes.NO_AUDIO),
+      dock: this.constructor.parseBoolean(element, VideoAttributes.DOCK),
+      rotateToFullscreen: this.constructor.parseBoolean(
+          element,
           VideoAttributes.ROTATE_TO_FULLSCREEN,
       ),
     };
   }
+}
 
+/** @implements {../../../src/video-interface.VideoInterface} */
+export class AmpWpmPlayer extends AMP.BaseElement {
   /**
    * Method that sends postMessage to iframe that contains the player.
    * Message is prepended with proper header.
@@ -270,6 +323,8 @@ export class AmpWpmPlayer extends AMP.BaseElement {
 
   /** @override */
   buildCallback() {
+    const frameUrl = 'https://std.wpcdn.pl/wpjslib/AMP-270-init-iframe/playerComponentFrame.html';
+
     this.win.addEventListener('message', e => {
       if (typeof e.data === 'string' && e.data.startsWith(this.header_)) {
         const message = e.data.replace(this.header_, '');
@@ -280,12 +335,13 @@ export class AmpWpmPlayer extends AMP.BaseElement {
       }
     });
 
-    this.attributes_ = this.parseAttributes_();
+    this.attributes_ = attributeParser.parseAttributes(this.element_);
 
     this.frameId_ = this.attributes_.id || `${Math.random() * 10e17}`;
-    this.frameUrl_ = new URL('https://std.wpcdn.pl/wpjslib/AMP-270-init-iframe/playerComponentFrame.html');
-    this.frameUrl_.searchParams.set('frameId', this.frameId_);
-    this.frameUrl_.searchParams.set('debug', 'ampPlayerComponent');
+    this.frameUrl_ = addParamToUrl(frameUrl, 'frameId', this.frameId_);
+    this.frameUrl_ = addParamToUrl(this.frameUrl_,
+        'debug',
+        'ampPlayerComponent');
 
     if (this.attributes_.url) {
       this.videoId_ = /mid=(\d*)/g.exec(this.attributes_.url)[1];
@@ -294,7 +350,7 @@ export class AmpWpmPlayer extends AMP.BaseElement {
     }
 
     if (!this.videoId_) {
-      throw new Error('No clip specified');
+      user().error('No clip specified');
     }
     this.header_ = `WP.AMP.PLAYER.${this.frameId_}.`;
 
@@ -325,9 +381,10 @@ export class AmpWpmPlayer extends AMP.BaseElement {
 
     const image = this.win.document.createElement('amp-img');
     image.setAttribute('layout', 'fill');
-    if (this.placeholderUrl_) {
-      image.setAttribute('src', this.placeholderUrl_);
-    }
+
+    const urlService = Services.urlForDoc(this.element);
+    const src = urlService.assertHttpsUrl(this.placeholderUrl_, this.element);
+    image.setAttribute('src', src);
 
     placeholder.appendChild(image);
     return placeholder;
@@ -396,11 +453,11 @@ export class AmpWpmPlayer extends AMP.BaseElement {
     });
 
     this.addMessageListener_('PLAYED.RANGES', data => {
-      that.playedRanges_ = JSON.parse(data);
+      that.playedRanges_ = tryParseJson(data);
     });
 
     this.addMessageListener_('METADATA', data => {
-      that.metadata_ = JSON.parse(data);
+      that.metadata_ = tryParseJson(data);
     });
 
     this.iframe_ = this.win.document.createElement('amp-iframe');
@@ -415,7 +472,7 @@ export class AmpWpmPlayer extends AMP.BaseElement {
 
     const placeholder = this.win.document.createElement('amp-img');
     placeholder.setAttribute('layout', 'fill');
-    placeholder.setAttribute('placeholder', 'true');
+    placeholder.setAttribute('placeholder', '');
     if (this.placeholderUrl_) {
       placeholder.setAttribute('src', this.placeholderUrl_);
     }

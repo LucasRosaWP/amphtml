@@ -1,5 +1,5 @@
 #
-# Copyright 2018 The AMP HTML Authors. All Rights Reserved.
+# Copyright 2019 The AMP HTML Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -43,14 +43,13 @@ tags: {  # <amp-wpm-player>
   }
   attrs: {
     name: "adv"
-    value_casei: "true"
-    value_casei: "false"
+    value: ""
   }
   attrs: {
     name: "title"
   }
   attrs: {
-    name: "screenshot"
+    name: "poster"
     value_url: {
       protocol: "https"
       allow_relative: false
@@ -59,39 +58,33 @@ tags: {  # <amp-wpm-player>
   }
   attrs: {
     name: "forcerelated"
-    value_casei: "true"
-    value_casei: "false"
+    value: ""
   }
   attrs: {
     name: "hiderelated"
-    value_casei: "true"
-    value_casei: "false"
+    value: ""
   }
   attrs: {
     name: "hideendscreen"
-    value_casei: "true"
-    value_casei: "false"
+    value: ""
   }
   attrs: {
     name: "mediaEmbed"
   }
   attrs: {
     name: "extendedrelated"
-    value_casei: "true"
-    value_casei: "false"
+    value: ""
   }
   attrs: {
     name: "skin"
   }
   attrs: {
     name: "showlogo"
-    value_casei: "true"
-    value_casei: "false"
+    value: ""
   }
     attrs: {
     name: "watermark"
-    value_casei: "true"
-    value_casei: "false"
+    value: ""
   }
   attrs: {
     name: "qoeEventsConfig"
@@ -101,26 +94,17 @@ tags: {  # <amp-wpm-player>
   }
   attrs: {
     name: "vastTag"
+    value_url: {
+      protocol: "https"
+      allow_relative: false
+      allow_empty: false
+    }
   }
   attrs: {
     name: "embedTrackings"
   }
-    attrs: {
+  attrs: {
     name: "id"
-  }
-
-
-  attrs: {
-    name: "adv"
-  }
-  attrs: {
-    name: "adv"
-  }
-  attrs: {
-    name: "adv"
-  }
-  attrs: {
-    name: "adv"
   }
   attr_lists: "extended-amp-global"
   spec_url: "https://www.ampproject.org/docs/reference/components/amp-wpm-player"
