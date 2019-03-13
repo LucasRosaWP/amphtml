@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/** Version: 0.1.22.42 */
+/** Version: 0.1.22.45 */
 /**
  * @license
  * Copyright 2017 The Web Activities Authors. All Rights Reserved.
@@ -437,7 +437,7 @@ function isNodeConnected(node) {
   }
   // Polyfill.
   const root = node.ownerDocument && node.ownerDocument.documentElement;
-  return root && root.contains(node) || false;
+  return (root && root.contains(node)) || false;
 }
 
 
@@ -1524,7 +1524,7 @@ class ActivityPorts {
    */
   constructor(win) {
     /** @const {string} */
-    this.version = '1.20';
+    this.version = '1.22';
 
     /** @private @const {!Window} */
     this.win_ = win;
@@ -3108,6 +3108,45 @@ class ErrorUtils {
  * limitations under the License.
  */
 
+
+/**
+ * @param {!web-activities/activity-ports.ActivityPort} port
+ * @param {string} requireOrigin
+ * @param {boolean} requireOriginVerified
+ * @param {boolean} requireSecureChannel
+ * @return {!Promise<!Object>}
+ */
+function acceptPortResultData(
+    port,
+    requireOrigin,
+    requireOriginVerified,
+    requireSecureChannel) {
+  return port.acceptResult().then(result => {
+    if (result.origin != requireOrigin ||
+        requireOriginVerified && !result.originVerified ||
+        requireSecureChannel && !result.secureChannel) {
+      throw new Error('channel mismatch');
+    }
+    return result.data;
+  });
+}
+
+/**
+ * Copyright 2018 The Subscribe with Google Authors. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS-IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 /** @const {!Object<string, string>} */
 const iframeAttributes = {
   'frameborder': '0',
@@ -3226,8 +3265,9 @@ class ActivityIframeView extends View {
 
   /**
    * @return {!Promise<!web-activities/activity-ports.ActivityIframePort>}
+   * @private
    */
-  port() {
+  getPortPromise_() {
     return this.portPromise_;
   }
 
@@ -3235,7 +3275,7 @@ class ActivityIframeView extends View {
    * @param {!Object} data
    */
   message(data) {
-    this.port().then(port => {
+    this.getPortPromise_().then(port => {
       port.message(data);
     });
   }
@@ -3245,7 +3285,7 @@ class ActivityIframeView extends View {
    * @param {function(!Object<string, string|boolean>)} callback
    */
   onMessage(callback) {
-    this.port().then(port => {
+    this.getPortPromise_().then(port => {
       port.onMessage(callback);
     });
   }
@@ -3255,7 +3295,24 @@ class ActivityIframeView extends View {
    * @return {!Promise<!web-activities/activity-ports.ActivityResult>}
    */
   acceptResult() {
-    return this.port().then(port => port.acceptResult());
+    return this.getPortPromise_().then(port => port.acceptResult());
+  }
+
+  /**
+   * Accepts results from the caller and verifies origin.
+   * @param {string} requireOrigin
+   * @param {boolean} requireOriginVerified
+   * @param {boolean} requireSecureChannel
+   * @return {!Promise<!Object>}
+   */
+  acceptResultAndVerify(
+    requireOrigin,
+    requireOriginVerified,
+    requireSecureChannel) {
+    return this.getPortPromise_().then(port => {
+      return acceptPortResultData(port, requireOrigin,
+          requireOriginVerified, requireSecureChannel);
+    });
   }
 
   /**
@@ -4335,7 +4392,7 @@ function feCached(url) {
  */
 function feArgs(args) {
   return Object.assign(args, {
-    '_client': 'SwG 0.1.22.42',
+    '_client': 'SwG 0.1.22.45',
   });
 }
 
@@ -7219,45 +7276,6 @@ function duplicateErrorIfNecessary(error) {
  * limitations under the License.
  */
 
-
-/**
- * @param {!web-activities/activity-ports.ActivityPort} port
- * @param {string} requireOrigin
- * @param {boolean} requireOriginVerified
- * @param {boolean} requireSecureChannel
- * @return {!Promise<!Object>}
- */
-function acceptPortResultData(
-    port,
-    requireOrigin,
-    requireOriginVerified,
-    requireSecureChannel) {
-  return port.acceptResult().then(result => {
-    if (result.origin != requireOrigin ||
-        requireOriginVerified && !result.originVerified ||
-        requireSecureChannel && !result.secureChannel) {
-      throw new Error('channel mismatch');
-    }
-    return result.data;
-  });
-}
-
-/**
- * Copyright 2018 The Subscribe with Google Authors. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS-IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 const LINK_REQUEST_ID = 'swg-link';
 
 
@@ -7384,13 +7402,10 @@ class LinkCompleteFlow {
    * @return {!Promise}
    */
   start() {
-    const promise = this.activityIframeView_.port().then(port => {
-      return acceptPortResultData(
-          port,
-          feOrigin(),
-          /* requireOriginVerified */ true,
-          /* requireSecureChannel */ true);
-    });
+    const promise = this.activityIframeView_.acceptResultAndVerify(
+        feOrigin(),
+        /* requireOriginVerified */ true,
+        /* requireSecureChannel */ true);
     promise.then(response => {
       this.complete_(response);
     }).catch(reason => {
@@ -7455,11 +7470,8 @@ class LinkSaveFlow {
     /** @private {?Promise<*>} */
     this.requestPromise_ = null;
 
-    /** @private {?Promise<!Object>} */
-    this.linkedPromise_ = null;
-
-    /** @private {?Promise<boolean>} */
-    this.confirmPromise_ = null;
+    /** @private {?Promise} */
+    this.openPromise_ = null;
 
     /** @private {?ActivityIframeView} */
     this.activityIframeView_ = null;
@@ -7474,26 +7486,41 @@ class LinkSaveFlow {
   }
 
   /**
-   * @return {?Promise}
-   * @package Visible for testing.
-   */
-  whenLinked() {
-    return this.linkedPromise_;
-  }
-
-  /**
-   * @return {?Promise<boolean>}
-   * @package Visible for testing.
-   */
-  whenConfirmed() {
-    return this.confirmPromise_;
-  }
-
-  /**
    * @private
    */
   complete_() {
     this.dialogManager_.completeView(this.activityIframeView_);
+  }
+
+  /**
+   * @param {!Object} result
+   * @return {!Promise<boolean>}
+   * @private
+   */
+  handleLinkSaveResponse_(result) {
+    // This flow is complete
+    this.complete_();
+    let startPromise;
+    let linkConfirm = null;
+    if (result['linked']) {
+      // When linking succeeds, start link confirmation flow
+      this.dialogManager_.popupClosed();
+      this.deps_.callbacks().triggerFlowStarted(
+          SubscriptionFlows.LINK_ACCOUNT);
+      linkConfirm = new LinkCompleteFlow(this.deps_, result);
+      startPromise = linkConfirm.start();
+    } else {
+      startPromise = Promise.reject(
+          createCancelError(this.win_, 'not linked'));
+    }
+    const completePromise = startPromise.then(() => {
+      this.deps_.callbacks().triggerLinkProgress();
+      return linkConfirm.whenComplete();
+    });
+
+    return completePromise.then(() => {
+      return true;
+    });
   }
 
   /**
@@ -7508,7 +7535,6 @@ class LinkSaveFlow {
       'publicationId': this.deps_.pageConfig().getPublicationId(),
       'isClosable': true,
     };
-
     this.activityIframeView_ = new ActivityIframeView(
         this.win_,
         this.activityPorts_,
@@ -7543,45 +7569,26 @@ class LinkSaveFlow {
       }
     });
 
-    this.linkedPromise_ = this.activityIframeView_.port().then(port => {
-      return acceptPortResultData(
-          port,
-          feOrigin(),
-          /* requireOriginVerified */ true,
-          /* requireSecureChannel */ true);
-    });
-
-    let linkConfirm = null;
-    this.confirmPromise_ = this.linkedPromise_.then(result => {
-      // This flow is complete
-      this.complete_();
-      if (result['linked']) {
-        this.dialogManager_.popupClosed();
-        this.deps_.callbacks().triggerFlowStarted(
-            SubscriptionFlows.LINK_ACCOUNT);
-        linkConfirm = new LinkCompleteFlow(this.deps_, result);
-        return linkConfirm.start();
-      }
-      return Promise.reject(createCancelError(this.win_, 'not linked'));
-    }).then(() => {
-      this.deps_.callbacks().triggerLinkProgress();
-      return linkConfirm.whenComplete();
-    }).then(() => {
-      return true;
-    }).catch(reason => {
-      if (isCancelError(reason)) {
-        this.deps_.callbacks().triggerFlowCanceled(
-            SubscriptionFlows.LINK_ACCOUNT);
-        return false;
-      }
-      // In case this flow wasn't complete, complete it here
-      this.complete_();
-      throw reason;
-    });
-
-    /** {!Promise<boolean>} */
-    return this.dialogManager_.openView(this.activityIframeView_,
+    this.openPromise_ = this.dialogManager_.openView(this.activityIframeView_,
         /* hidden */ true);
+        /** {!Promise<boolean>} */
+    return this.activityIframeView_.acceptResultAndVerify(
+        feOrigin(),
+        /* requireOriginVerified */ true,
+        /* requireSecureChannel */ true
+      ).then(result => {
+        return this.handleLinkSaveResponse_(result);
+      }).catch(reason => {
+        // In case this flow wasn't complete, complete it here
+        this.complete_();
+        // Handle cancellation from user, link confirm start or completion here
+        if (isCancelError(reason)) {
+          this.deps_.callbacks().triggerFlowCanceled(
+              SubscriptionFlows.LINK_ACCOUNT);
+          return false;
+        }
+        throw reason;
+      });
   }
 }
 

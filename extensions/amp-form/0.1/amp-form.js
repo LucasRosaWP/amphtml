@@ -16,6 +16,7 @@
 
 import {ActionTrust} from '../../../src/action-constants';
 import {AmpEvents} from '../../../src/amp-events';
+import {AmpFormTextarea} from './amp-form-textarea';
 import {
   AsyncInputAttributes,
   AsyncInputClasses,
@@ -36,7 +37,6 @@ import {
   ancestorElementsByTag,
   childElementByAttr,
   createElementWithAttributes,
-  escapeCssSelectorIdent,
   iterateCursor,
   removeElement,
   tryFocus,
@@ -45,6 +45,7 @@ import {createCustomEvent} from '../../../src/event-helper';
 import {createFormDataWrapper} from '../../../src/form-data-wrapper';
 import {deepMerge, dict} from '../../../src/utils/object';
 import {dev, devAssert, user, userAssert} from '../../../src/log';
+import {escapeCssSelectorIdent} from '../../../src/css';
 import {
   formOrNullForElement,
   getFormAsObject,
@@ -527,11 +528,19 @@ export class AmpForm {
           this.urlReplacement_.expandInputValueSync(varSubsFields[i]);
         }
 
-        this.handleNonXhrGet_(/*shouldSubmitFormElement*/false);
+        /**
+         * If the submit was called with an event, then we shouldn't
+         * manually submit the form
+         */
+        const shouldSubmitFormElement = !event;
+
+        this.handleNonXhrGet_(shouldSubmitFormElement);
         return Promise.resolve();
       }
 
-      event.preventDefault();
+      if (event) {
+        event.preventDefault();
+      }
     }
 
     // Set ourselves to the SUBMITTING State
@@ -810,7 +819,7 @@ export class AmpForm {
 
   /**
    * Transition the form to the submit success state.
-   * @param {!JsonObject|string|undefined} response
+   * @param {!JsonObject} response
    * @param {!FetchRequestDef} request
    * @return {!Promise}
    * @private visible for testing
@@ -819,7 +828,7 @@ export class AmpForm {
     // Construct the fetch response to reuse the methods in-place for
     // amp CORs validation.
     this.ssrTemplateHelper_.verifySsrResponse(this.win_, response, request);
-    return this.handleSubmitSuccess_(tryResolve(() => response['html']));
+    return this.handleSubmitSuccess_(tryResolve(() => response));
   }
 
   /**
@@ -1032,6 +1041,7 @@ export class AmpForm {
    * Renders a template based on the form state and its presence in the form.
    * @param {!JsonObject} data
    * @return {!Promise}
+   * @private
    */
   renderTemplate_(data) {
     const container = this.form_./*OK*/querySelector(`[${this.state_}]`);
@@ -1042,7 +1052,7 @@ export class AmpForm {
       container.setAttribute('aria-labeledby', messageId);
       container.setAttribute('aria-live', 'assertive');
       if (this.templates_.hasTemplate(container)) {
-        p = this.templates_.findAndRenderTemplate(container, data)
+        p = this.ssrTemplateHelper_.renderTemplate(devAssert(container), data)
             .then(rendered => {
               rendered.id = messageId;
               rendered.setAttribute('i-amphtml-rendered', '');
@@ -1288,9 +1298,11 @@ export class AmpFormService {
    */
   installHandlers_(ampdoc) {
     return ampdoc.whenReady().then(() => {
-      this.installSubmissionHandlers_(
-          ampdoc.getRootNode().querySelectorAll('form'));
-      this.installGlobalEventListener_(ampdoc.getRootNode());
+      const root = ampdoc.getRootNode();
+
+      this.installSubmissionHandlers_(root.querySelectorAll('form'));
+      AmpFormTextarea.install(ampdoc);
+      this.installGlobalEventListener_(root);
     });
   }
 

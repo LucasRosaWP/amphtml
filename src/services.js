@@ -327,6 +327,15 @@ export class Services {
   }
 
   /**
+   * @param {!Element|!./service/ampdoc-impl.AmpDoc} elementOrAmpDoc
+   * @return {!Promise<!./service/resources-impl.Resources>}
+   */
+  static resourcesPromiseForDoc(elementOrAmpDoc) {
+    return /** @type {!Promise<!./service/resources-impl.Resources>} */ (
+      getServicePromiseForDoc(elementOrAmpDoc, 'resources'));
+  }
+
+  /**
    * @param {!Window} win
    * @return {?Promise<?{incomingFragment: string, outgoingFragment: string}>}
    */
@@ -393,6 +402,26 @@ export class Services {
    */
   static localizationService(win) {
     return getService(win, 'localization');
+  }
+
+  /**
+   * @param {!Window} win
+   * @return {!Promise<?../extensions/amp-story/1.0/story-analytics.StoryAnalyticsService>}
+   */
+  static storyAnalyticsServiceForOrNull(win) {
+    return (
+    /** @type {!Promise<?../extensions/amp-story/1.0/story-analytics.StoryAnalyticsService>} */
+      (getElementServiceIfAvailable(win, 'story-analytics', 'amp-story',
+          true)));
+  }
+
+  /**
+   * @param {!Window} win
+   * @return {?../extensions/amp-story/1.0/story-analytics.StoryAnalyticsService}
+   */
+  static storyAnalyticsService(win) {
+    return (/** @type {?../extensions/amp-story/1.0/story-analytics.StoryAnalyticsService} */
+      (getExistingServiceOrNull(win, 'story-analytics')));
   }
 
   /**
@@ -551,12 +580,11 @@ export class Services {
 
   /**
    * @param {!Element|!./service/ampdoc-impl.AmpDoc} elementOrAmpDoc
-   * @return {!./service/video-service-interface.VideoServiceInterface}
+   * @return {!./service/video-manager-impl.VideoManager}
    */
   static videoManagerForDoc(elementOrAmpDoc) {
-    return (
-      /** @type {!./service/video-service-interface.VideoServiceInterface} */ (
-        getServiceForDoc(elementOrAmpDoc, 'video-manager')));
+    return (/** @type {!./service/video-manager-impl.VideoManager} */ (
+      getServiceForDoc(elementOrAmpDoc, 'video-manager')));
   }
 
   /**

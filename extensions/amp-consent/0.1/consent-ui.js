@@ -89,6 +89,9 @@ export class ConsentUI {
     /** @private {?Element} */
     this.maskElement_ = null;
 
+    /** @private {?Element} */
+    this.elementWithFocusBeforeShowing_ = null;
+
     /** @private {!../../../src/service/ampdoc-impl.AmpDoc} */
     this.ampdoc_ = baseInstance.getAmpDoc();
 
@@ -100,6 +103,9 @@ export class ConsentUI {
 
     /** @private {!Window} */
     this.win_ = baseInstance.win;
+
+    /** @private @const {!Document} */
+    this.document_ = this.win_.document;
 
     /** @private {?Deferred} */
     this.iframeReady_ = null;
@@ -174,9 +180,17 @@ export class ConsentUI {
         // API before consent-response API.
         this.baseInstance_.mutateElement(() => {
 
+          if (!this.isPostPrompt_) {
+            this.elementWithFocusBeforeShowing_ = this.document_.activeElement;
+          }
+
           this.maybeShowOverlay_();
 
           this.showIframe_();
+
+          if (!this.isPostPrompt_) {
+            this.ui_./*OK*/focus();
+          }
         });
       });
     } else {
@@ -185,7 +199,11 @@ export class ConsentUI {
           return;
         }
 
+        toggle(this.ui_, true);
+
         if (!this.isPostPrompt_) {
+
+          this.elementWithFocusBeforeShowing_ = this.document_.activeElement;
 
           this.maybeShowOverlay_();
 
@@ -193,9 +211,9 @@ export class ConsentUI {
           // get un laid out after toggle display (#unlayoutOnPause)
           // for example <amp-iframe>
           this.baseInstance_.scheduleLayout(this.ui_);
-        }
 
-        toggle(this.ui_, true);
+          this.ui_./*OK*/focus();
+        }
       };
 
       // If the UI is an AMP Element, wait until it's built before showing it,
@@ -244,6 +262,15 @@ export class ConsentUI {
       this.baseInstance_.getViewport().removeFromFixedLayer(this.parent_);
       toggle(dev().assertElement(this.ui_), false);
       this.isVisible_ = false;
+
+      if (this.elementWithFocusBeforeShowing_) {
+        this.elementWithFocusBeforeShowing_./*OK*/focus();
+        this.elementWithFocusBeforeShowing_ = null;
+      } else if (this.win_.document.body.children.length > 0) {
+        // TODO (torch2424): Find if the first child can not be
+        // focusable due to styling.
+        this.win_.document.body.children[0]./*OK*/focus();
+      }
     });
   }
 
@@ -270,12 +297,30 @@ export class ConsentUI {
    */
   createPromptIframeFromSrc_(promptUISrc) {
     const iframe = this.parent_.ownerDocument.createElement('iframe');
+    let sandbox = 'allow-scripts';
     iframe.src = assertHttpsUrl(promptUISrc, this.parent_);
-    iframe.setAttribute('sandbox', 'allow-scripts');
+    const allowSameOrigin = this.allowSameOrigin_(iframe.src);
+    if (allowSameOrigin) {
+      sandbox = 'allow-scripts allow-same-origin';
+    }
+    iframe.setAttribute('sandbox', sandbox);
     const {classList} = iframe;
     classList.add(consentUiClasses.fill);
     // Append iframe lazily to save resources.
     return iframe;
+  }
+
+  /**
+   * Determines if allow-same-origin should be enabled for the prompt iframe
+   * @param {string} src
+   * @return {boolean}
+   */
+  allowSameOrigin_(src) {
+    const urlService = Services.urlForDoc(this.parent_);
+    const srcUrl = urlService.parse(src);
+    const containerUrl = urlService.parse(this.ampdoc_.getUrl());
+
+    return srcUrl.origin != containerUrl.origin;
   }
 
   /**

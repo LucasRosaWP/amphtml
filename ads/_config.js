@@ -174,6 +174,12 @@ export const adConfig = {
     consentHandlingOverride: true,
   },
 
+  'adsensor': {
+    prefetch: 'https://wfpscripts.webspectator.com/amp/adsensor-amp.js',
+    clientIdScope: 'amp_ecid_adensor',
+    renderStartImplemented: true,
+  },
+
   'adsnative': {
     prefetch: 'https://static.adsnative.com/static/js/render.v1.js',
     preconnect: 'https://api.adsnative.com',
@@ -263,8 +269,6 @@ export const adConfig = {
   },
 
   'aja': {
-    renderStartImplemented: true,
-    prefetch: 'https://cdn.as.amanad.adtdp.com/sdk/asot-v2.js',
   },
 
   'appvador': {
@@ -480,7 +484,7 @@ export const adConfig = {
   },
 
   'gumgum': {
-    prefetch: 'https://g2.gumgum.com/javascripts/ad.js',
+    prefetch: 'https://js.gumgum.com/slot.js',
     renderStartImplemented: true,
   },
 
@@ -533,6 +537,8 @@ export const adConfig = {
     preconnect: 'https://as-sec.casalemedia.com',
     renderStartImplemented: true,
   },
+
+  'jubna': {},
 
   'kargo': {},
 
@@ -756,6 +762,8 @@ export const adConfig = {
     renderStartImplemented: true,
   },
 
+  'promoteiq': {},
+
   'pubexchange': {},
 
   'pubguru': {
@@ -792,7 +800,7 @@ export const adConfig = {
   },
 
   'rbinfox': {
-	    renderStartImplemented: true,
+    renderStartImplemented: true,
   },
 
   'realclick': {
@@ -832,6 +840,10 @@ export const adConfig = {
 
   'runative': {
     prefetch: 'https://cdn.run-syndicate.com/sdk/v1/n.js',
+    renderStartImplemented: true,
+  },
+
+  'sas': {
     renderStartImplemented: true,
   },
 
@@ -933,6 +945,10 @@ export const adConfig = {
     consentHandlingOverride: true,
   },
 
+  'torimochi': {
+    renderStartImplemented: true,
+  },
+
   'triplelift': {},
 
   'trugaze': {
@@ -942,6 +958,10 @@ export const adConfig = {
 
   'uas': {
     prefetch: 'https://ads.pubmatic.com/AdServer/js/phoenix.js',
+  },
+
+  'ucfunnel': {
+    renderStartImplemented: true,
   },
 
   'uzou': {
