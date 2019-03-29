@@ -65,11 +65,17 @@ import {user} from '../../../src/log';
   */
 let AttributeOptionsDef;
 
+
+const jsonParser = value => value && tryParseJson(decodeURIComponent(value));
+const booleanParser = value => value ? value.toLowerCase() === 'true' : true;
+const stringParser = value => value ? value.toString() : '';
+const numberParser = value => value && parseInt(value, 10);
+
 /**
  * @class
  * @private
  */
-class attributeParser {
+export class attributeParser {
   /**
      * @param {Element} element
      * @param {string} name
@@ -78,14 +84,10 @@ class attributeParser {
      * @return {T|undefined}
      * @template T
      */
-  static parseAttribute(element, name, parseFunction, opt_required) {
-    let value = element.getAttribute(name);
+  static parseAttribute(element, name, parseFunction = a => a, opt_required) {
+    const value = element.getAttribute(name);
 
-    if (value === '') {
-      value = 'true';
-    }
-
-    if (!value) {
+    if (value === null) {
       user().assert(!opt_required, 'attribute %s is required', name);
       return;
     }
@@ -93,7 +95,7 @@ class attributeParser {
   }
 
   /**
-     * Method that parses a json object from the html attribute
+     * Parses a json object from the html attribute
      * specified in the name parameter
      * @param {Element} element
      * @param {string} name
@@ -102,16 +104,16 @@ class attributeParser {
      * @return {!JsonObject}
      */
   static parseJson(element, name, opt_required) {
-    return this.constructor.parseAttribute(
+    return this.parseAttribute(
         element,
         name,
-        value => tryParseJson(decodeURIComponent(value)),
+        jsonParser,
         opt_required,
     );
   }
 
   /**
-     * Method that parses a boolean from the html attribute
+     * Parses a boolean from the html attribute
      * specified in the name parameter
      * @param {Element} element
      * @param {string} name
@@ -120,15 +122,16 @@ class attributeParser {
      * @return {boolean}
      */
   static parseBoolean(element, name, opt_required) {
-    return this.constructor.parseAttribute(
+    return this.parseAttribute(
+        element,
         name,
-        value => value.toLowerCase() === 'true',
+        booleanParser,
         opt_required,
     );
   }
 
   /**
-     * Method that parses a string from the html attribute
+     * Parses a string from the html attribute
      * specified in the name parameter
      * @param {Element} element
      * @param {string} name
@@ -137,16 +140,16 @@ class attributeParser {
      * @return {string}
      */
   static parseString(element, name, opt_required) {
-    return this.constructor.parseAttribute(
+    return this.parseAttribute(
         element,
         name,
-        value => value,
+        stringParser,
         opt_required,
     );
   }
 
   /**
-     * Method that parses a number from the html attribute
+     * Parses a number from the html attribute
      * specified in the name parameter
      * @param {Element} element
      * @param {string} name
@@ -155,60 +158,73 @@ class attributeParser {
      * @return {number}
      */
   static parseNumber(element, name, opt_required) {
-    return this.constructor.parseAttribute(
+    return this.parseAttribute(
         element,
         name,
-        value => parseInt(value, 10),
+        numberParser,
         opt_required,
     );
   }
 
   /**
-   * @description Method that parses attributes,
+   *
+   * @param {*} obj
+   */
+  static clearObject(obj) {
+    Object.keys(obj).forEach(key => obj[key] === undefined && delete obj[key]);
+    return obj;
+  }
+
+  /**
+   * @description Parses attributes,
    * and ensures that all of the required parameters are present
-  * @param {Element} element
+   * @param {window} window
+   * @param {Element} element
    *
    * @return {!AttributeOptionsDef}
    */
-  static parseAttributes(element) {
-    const clip = this.constructor.parseJson('clip') || {};
-    return {
+  static parseAttributes(window, element) {
+    const clip = this.parseJson(element, 'clip') || {};
+    const output = {
       ampcontrols: true,
-      forceUrl4stat: this.constructor.win.location.href,
+      forceUrl4stat: window.location.href,
       target: 'playerTarget',
+      forceliteembed: false,
       ...clip,
-      adv: this.constructor.parseBoolean(element, 'adv'),
-      url: this.constructor.parseString(element, 'url'),
-      title: this.constructor.parseString(element, 'title'),
-      screenshot: this.constructor.parseString(element, 'poster'),
-      forcerelated: this.constructor.parseBoolean(element, 'forcerelated'),
-      hiderelated: this.constructor.parseBoolean(element, 'hiderelated'),
-      hideendscreen: this.constructor.parseBoolean(element, 'hideendscreen'),
-      mediaEmbed: this.constructor.parseString(element, 'mediaEmbed'),
-      extendedrelated: this.constructor.parseBoolean(
+      adv: this.parseBoolean(element, 'adv'),
+      url: this.parseString(element, 'url'),
+      title: this.parseString(element, 'title'),
+      screenshot: this.parseString(element, 'poster'),
+      forcerelated: this.parseBoolean(element, 'forcerelated'),
+      hiderelated: this.parseBoolean(element, 'hiderelated'),
+      hideendscreen: this.parseBoolean(element, 'hideendscreen'),
+      mediaEmbed: this.parseString(element, 'mediaEmbed'),
+      extendedrelated: this.parseBoolean(
           element,
           'extendedrelated'),
-      skin: this.constructor.parseJson(element, 'skin'),
-      showlogo: this.constructor.parseBoolean(element, 'showlogo'),
-      watermark: this.constructor.parseBoolean(element, 'watermark'),
-      qoeEventsConfig: this.constructor.parseJson(element, 'qoeEventsConfig'),
-      advVastDuration: this.constructor.parseNumber(element, 'advVastDuration'),
-      vastTag: this.constructor.parseString(element, 'vastTag'),
-      embedTrackings: this.constructor.parseJson(element, 'embedTrackings'),
-      id: this.constructor.parseString(element, 'id'),
+      skin: this.parseJson(element, 'skin'),
+      showlogo: this.parseBoolean(element, 'showlogo'),
+      watermark: this.parseBoolean(element, 'watermark'),
+      qoeEventsConfig: this.parseJson(element, 'qoeEventsConfig'),
+      advVastDuration: this.parseNumber(element, 'advVastDuration'),
+      vastTag: this.parseString(element, 'vastTag'),
+      embedTrackings: this.parseJson(element, 'embedTrackings'),
+      id: this.parseString(element, 'id'),
 
-      autoplay: this.constructor.parseBoolean(
+      autoplay: this.parseBoolean(
           element,
           VideoAttributes.AUTOPLAY) || false,
-      ampnoaudio: this.constructor.parseBoolean(
+      ampnoaudio: this.parseBoolean(
           element,
           VideoAttributes.NO_AUDIO),
-      dock: this.constructor.parseBoolean(element, VideoAttributes.DOCK),
-      rotateToFullscreen: this.constructor.parseBoolean(
+      dock: this.parseBoolean(element, VideoAttributes.DOCK),
+      rotateToFullscreen: this.parseBoolean(
           element,
           VideoAttributes.ROTATE_TO_FULLSCREEN,
       ),
     };
+
+    return this.clearObject(output);
   }
 }
 
@@ -227,10 +243,13 @@ export class AmpWpmPlayer extends AMP.BaseElement {
    */
   sendCommand_(name, data, skipQueue = false) {
     if (this.frameReady_ || skipQueue) {
+      console.log('SEND COMMAND component -> IFRAME', name, 'with data: ', data);
+
       this.contentWindow_.postMessage(data
         ? `${this.header_}${name}@PAYLOAD@${data}`
         : `${this.header_}${name}`, '*');
     } else {
+      console.log('QUEUE component -> IFRAME', name, 'with data: ', data);
       this.messageQueue_.push({name, data});
     }
   }
@@ -257,6 +276,7 @@ export class AmpWpmPlayer extends AMP.BaseElement {
     this.messageListeners_.push(data => {
       const message = data.split('@PAYLOAD@');
       if (messageName === message[0]) {
+        console.log('component recived', message[0], message[1]);
         callback(message[1]);
       }
     });
@@ -335,7 +355,7 @@ export class AmpWpmPlayer extends AMP.BaseElement {
       }
     });
 
-    this.attributes_ = attributeParser.parseAttributes(this.element_);
+    this.attributes_ = attributeParser.parseAttributes(this.win, this.element_);
 
     this.frameId_ = this.attributes_.id || `${Math.random() * 10e17}`;
     this.frameUrl_ = addParamToUrl(frameUrl, 'frameId', this.frameId_);
@@ -379,14 +399,17 @@ export class AmpWpmPlayer extends AMP.BaseElement {
     const placeholder = this.win.document.createElement('div');
     placeholder.setAttribute('placeholder', 'true');
 
-    const image = this.win.document.createElement('amp-img');
-    image.setAttribute('layout', 'fill');
+    if (this.placeholderUrl_) {
+      const image = this.win.document.createElement('amp-img');
+      image.setAttribute('layout', 'fill');
 
-    const urlService = Services.urlForDoc(this.element);
-    const src = urlService.assertHttpsUrl(this.placeholderUrl_, this.element);
-    image.setAttribute('src', src);
+      const urlService = Services.urlForDoc(this.element);
+      const src = urlService.assertHttpsUrl(this.placeholderUrl_, this.element);
+      image.setAttribute('src', src);
 
-    placeholder.appendChild(image);
+      placeholder.appendChild(image);
+    }
+
     return placeholder;
   }
 
@@ -466,7 +489,8 @@ export class AmpWpmPlayer extends AMP.BaseElement {
         'sandbox',
         'allow-scripts allow-same-origin allow-popups',
     );
-    this.iframe_.setAttribute('src', this.frameUrl_.toLocaleString());
+    this.iframe_.setAttribute('src', this.frameUrl_);
+    // this.iframe_.setAttribute('srcdoc', this.frameUrl_);
     this.iframe_.setAttribute('frameborder', 0);
     this.iframe_.setAttribute('allowfullscreen', true);
 
@@ -476,8 +500,8 @@ export class AmpWpmPlayer extends AMP.BaseElement {
     if (this.placeholderUrl_) {
       placeholder.setAttribute('src', this.placeholderUrl_);
     }
-
     this.iframe_.appendChild(placeholder);
+
     this.container_.appendChild(this.iframe_);
 
     installVideoManagerForDoc(this.element_);

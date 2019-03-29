@@ -15,6 +15,7 @@
 */
 
 import '../amp-wpm-player';
+import {attributeParser} from '../amp-wpm-player';
 
 describes.realWin('amp-wpm-player', {
   amp: {
@@ -84,6 +85,186 @@ describes.realWin('amp-wpm-player', {
     }};
 
     getWpmPlayer(options).should.eventually.be.rejectedWith(new Error('asdf'));
+  });
+
+  describe('attributeParser class', () => {
+    let playerElement;
+
+    beforeEach(() => {
+      playerElement = document.createElement('amp-wpm-player');
+    });
+
+    describe('parseAttribute', () => {
+      it('should default to true if attribute value is empty', () => {
+        playerElement.setAttribute('test','');
+
+        const result = attributeParser.parseAttribute(playerElement, 'test');
+
+        expect(result).to.equal('true');
+      });
+
+      it('should return undefined if attribute is not present and not required', () => {
+        const result = attributeParser.parseAttribute(playerElement, 'test');
+
+        expect(result).to.be.undefined;
+      });
+
+      it('should throw if attirbute is not present and required', () => {
+        expect(() => attributeParser.parseAttribute(playerElement, 'test', undefined, true)).to.throw();
+      });
+
+      it('should call parseFunction with attribute value as an argument', () => {
+        const mockParseFunction = sinon.fake();
+
+        playerElement.setAttribute('test','testvalue');
+
+        attributeParser.parseAttribute(playerElement, 'test', mockParseFunction);
+
+        expect(mockParseFunction.calledWith('testvalue')).to.equal(true);
+      });
+    });
+
+    describe('parseBoolean', () => {
+      it('should return true if attribute has no value', () => {
+        playerElement.setAttribute('test','');
+
+        const result = attributeParser.parseBoolean(playerElement, 'test');
+
+        expect(result).to.be.true;
+      });
+
+      it('should return true if attribute value is true', () => {
+        playerElement.setAttribute('test','true');
+
+        const result = attributeParser.parseBoolean(playerElement, 'test');
+
+        expect(result).to.be.true;
+      });
+
+      it('should return undefined value if attribute is not preset', () => {
+        const result = attributeParser.parseBoolean(playerElement, 'test');
+
+        expect(result).to.be.undefined;
+      });
+
+      it('should return false value if attribute value is false', () => {
+        playerElement.setAttribute('test','false');
+
+        const result = attributeParser.parseBoolean(playerElement, 'test');
+
+        expect(result).to.be.false;
+      });
+    });
+
+    describe('parseJson', () => {
+      it('should return an object when given valid json', () => {
+        const testObject = {test: 1};
+        playerElement.setAttribute('test', JSON.stringify(testObject));
+
+        const result = attributeParser.parseJson(playerElement, 'test');
+
+        expect(result).to.deep.equal(testObject);
+      });
+
+      it('should throw an exception when given invalid json', () => {
+        playerElement.setAttribute('test', JSON.stringify('someInvalidJSON'));
+
+        expect(() => attributeParser.parseJson(playerElement, 'test')).to.throw;
+      });
+
+      it('should return undefined if attribute has no value', () => {
+        playerElement.setAttribute('test', '');
+
+        const result = attributeParser.parseJson(playerElement, 'test', true);
+
+        expect(result).to.be.undefined;
+      });
+
+      it('should return undefined if attribute is not set', () => {
+        const result = attributeParser.parseJson(playerElement, 'test');
+
+        expect(result).to.be.undefined;
+      });
+
+    });
+
+    describe('parseString', () => {
+      it('should return a string when attributes value is a string', () => {
+        playerElement.setAttribute('test', 'testString');
+
+        const result = attributeParser.parseString(playerElement, 'test');
+
+        expect(result).to.be.a('string');
+        expect(result).to.be.equal('testString');
+      });
+
+      it('should return empty string when attribute has no value', () => {
+        playerElement.setAttribute('test', '');
+
+        const result = attributeParser.parseString(playerElement, 'test');
+
+        expect(result).to.equal('');
+      });
+
+      it('should return undefined when attribute is not set', () => {
+        const result = attributeParser.parseString(playerElement, 'test');
+
+        expect(result).to.be.undefined;
+      });
+    });
+
+    describe('parseNumber', () => {
+      it('should return undefined when attribute is not set', () => {
+        // playerElement.setAttribute('test', 'testString');
+
+        const result = attributeParser.parseNumber(playerElement, 'test');
+
+        expect(result).to.be.undefined;
+      });
+
+      it('should return undefined when attribute has no value', () => {
+        playerElement.setAttribute('test', '');
+
+        const result = attributeParser.parseNumber(playerElement, 'test');
+
+        expect(result).to.be.undefined;
+      });
+
+      it('should return a number when attribute value is a number', () => {
+        playerElement.setAttribute('test', 1234);
+
+        const result = attributeParser.parseNumber(playerElement, 'test');
+
+        expect(result).to.be.a('number');
+        expect(result).to.equal(1234);
+      });
+
+      it('should throw an exception when given invalid number', () => {
+        playerElement.setAttribute('test', JSON.stringify('test'));
+
+        expect(() => attributeParser.parseNumber(playerElement, 'test')).to.throw;
+      });
+    });
+
+    describe('parseAttributes', () => {
+      it('should return object with reqired fields when given an element with no valid attributes', () => {
+        // playerElement.setAttribute('test', 'testString');
+        const mockWindow = {
+          location: {
+            href: 'testLocation',
+          },
+        };
+
+        const result = attributeParser.parseAttributes(mockWindow, playerElement);
+
+        expect(result).to.deep.equal({
+          ampcontrols: true,
+          forceUrl4stat: mockWindow.location.href,
+          target: 'playerTarget',
+          forceliteembed: false,
+        });
+      });
+    });
   });
 
   describe('video interface methods', () => {

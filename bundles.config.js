@@ -480,6 +480,7 @@ exports.extensionBundles = [
   {
     name: 'amp-wpm-player',
     version: '0.1',
+    latestVersion: '0.1',
     type: TYPES.MEDIA,
   },
   {
