@@ -66,10 +66,10 @@ import {user} from '../../../src/log';
 let AttributeOptionsDef;
 
 
-const jsonParser = value => value && tryParseJson(decodeURIComponent(value));
+const jsonParser = value => value ? tryParseJson(decodeURIComponent(value)) : undefined;
 const booleanParser = value => value ? value.toLowerCase() === 'true' : true;
 const stringParser = value => value ? value.toString() : '';
-const numberParser = value => value && parseInt(value, 10);
+const numberParser = value => value ? parseInt(value, 10) : undefined;
 
 /**
  * @class

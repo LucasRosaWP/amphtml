@@ -15,6 +15,9 @@
 */
 
 import '../amp-wpm-player';
+import {
+  VideoAttributes,
+} from '../../../../src/video-interface';
 import {attributeParser} from '../amp-wpm-player';
 
 describes.realWin('amp-wpm-player', {
@@ -84,7 +87,7 @@ describes.realWin('amp-wpm-player', {
       url: '',
     }};
 
-    getWpmPlayer(options).should.eventually.be.rejectedWith(new Error('asdf'));
+    getWpmPlayer(options).should.eventually.be.rejectedWith(new Error());
   });
 
   describe('attributeParser class', () => {
@@ -95,12 +98,13 @@ describes.realWin('amp-wpm-player', {
     });
 
     describe('parseAttribute', () => {
-      it('should default to true if attribute value is empty', () => {
+      it('should return an empty string if attribute value is empty', () => {
         playerElement.setAttribute('test','');
 
         const result = attributeParser.parseAttribute(playerElement, 'test');
 
-        expect(result).to.equal('true');
+        expect(result).to.be.a('string');
+        expect(result).to.equal('');
       });
 
       it('should return undefined if attribute is not present and not required', () => {
@@ -247,21 +251,69 @@ describes.realWin('amp-wpm-player', {
     });
 
     describe('parseAttributes', () => {
+      const mockWindow = {
+        location: {
+          href: 'testLocation',
+        },
+      };
+
+      const constAttributes = {
+        ampcontrols: true,
+        forceUrl4stat: mockWindow.location.href,
+        target: 'playerTarget',
+        forceliteembed: false,
+        autoplay: false,
+      };
+
       it('should return object with reqired fields when given an element with no valid attributes', () => {
-        // playerElement.setAttribute('test', 'testString');
-        const mockWindow = {
-          location: {
-            href: 'testLocation',
-          },
-        };
+        const result = attributeParser.parseAttributes(mockWindow, playerElement);
+        expect(result).to.deep.equal(constAttributes);
+      });
+
+      it('should return object with reqired fields and added fielnds when given an element with valid attributes', () => {
+        playerElement.setAttribute('title', 'testTitle');
 
         const result = attributeParser.parseAttributes(mockWindow, playerElement);
+        expect(result).to.deep.equal({title: 'testTitle', ...constAttributes});
+      });
 
-        expect(result).to.deep.equal({
-          ampcontrols: true,
-          forceUrl4stat: mockWindow.location.href,
-          target: 'playerTarget',
-          forceliteembed: false,
+      describe('should parse all supported attributes', () => {
+        const supportedAttributes = [
+          {name: 'adv', type: 'boolean', value: true},
+          {name: 'url', type: 'string', value: 'testString'},
+          {name: 'title', type: 'string', value: 'testString'},
+          {name: 'poster', type: 'boolean', value: true},
+          {name: 'forcerelated', type: 'boolean', value: true},
+          {name: 'hiderelated', type: 'boolean', value: true},
+          {name: 'hideendscreen', type: 'boolean', value: true},
+          {name: 'mediaEmbed', type: 'string', value: 'testString'},
+          {name: 'extendedrelated', type: 'boolean', value: true},
+          {name: 'skin', type: 'object', value: {a: 1, b: {c: 2}}},
+          {name: 'showlogo', type: 'boolean', value: true},
+          {name: 'watermark', type: 'boolean', value: true},
+          {name: 'qoeEventsConfig', type: 'object', value: {a: 1, b: {c: 2}}},
+          {name: 'advVastDuration', type: 'number', value: 123},
+          {name: 'vastTag', type: 'string', value: 'testString'},
+          {name: 'embedTrackings', type: 'object', value: {a: 1, b: {c: 2}}},
+          {name: 'id', type: 'string', value: 'testString'},
+          {name: VideoAttributes.AUTOPLAY, type: 'boolean', value: true},
+          {name: VideoAttributes.NO_AUDIO, type: 'boolean', value: true},
+          {name: VideoAttributes.ROTATE_TO_FULLSCREEN, type: 'boolean', value: true},
+        ];
+
+        supportedAttributes.forEach(supportedAttribute => {
+          it(`Should parse: ${supportedAttribute.name}`, () => {
+            if (supportedAttribute.type === 'object') {
+              playerElement.setAttribute(supportedAttribute.name, JSON.stringify(supportedAttribute.value));
+            } else {
+              playerElement.setAttribute(supportedAttribute.name, supportedAttribute.value);
+            }
+
+            const result = attributeParser.parseAttributes(mockWindow, playerElement);
+
+            expect(result[supportedAttribute.name]).to.deep.equal(supportedAttribute.value);
+            expect(result[supportedAttribute.name]).to.be.a(supportedAttribute.type);
+          });
         });
       });
     });
