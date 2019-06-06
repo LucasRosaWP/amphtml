@@ -1,6 +1,6 @@
 # End-to-end Tests
 
-AMP contibutors embrace testing to maintain confidence that their code is executing correctly during development and maintenance of features and fixes. End-to-end (or E2E) tests aim to closely reproduce how a user would interact with a document as possible.
+AMP contributors embrace testing to maintain confidence that their code is executing correctly during development and maintenance of features and fixes. End-to-end (or E2E) tests aim to closely reproduce how a user would interact with a document as possible.
 
 * [What is an end-to-end test?](#what-is-an-end-to-end-test)
 * [Choosing which features to test](#choosing-which-features-to-test)
@@ -182,3 +182,7 @@ Add `repl(/* mochaThis */ this)` to a test to pause execution at that line witho
 ```
 
 In the Node debugger, the `repl` global provides a reference to the test controller at `repl.controller`. To continue a test after using `repl`, call `repl.continue()` which will resolve the Promise returned by the `repl(this)` call and allow execution to continue past the `await`.
+
+### watch mode
+
+Debug tests in `watch` mode with the `--watch` flag. This will allow you to make changes to test files without having to rerun the `gulp e2e` task.
